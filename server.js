@@ -77,11 +77,43 @@ app.get('/documents', authMiddleware, (req, res) => {
 });
 
 app.post('/documents', authMiddleware, (req, res) => {
-    const newDocument = req.body;
-    newDocument.id = Date.now();
+    const { title, content } = req.body;
+
+    // Перевірка, чи передані всі необхідні поля
+
+    if (!title || !content) {
+        return res.status(400).json({ message: 'Bad Request. Fields "title" and "content" are required.' });
+    }
+
+    const newDocument = {
+        id: Date.now(),
+        title,
+        content,
+    };
+
     documents.push(newDocument);
     res.status(201).json(newDocument);
 });
+
+// Новий маршрут для видалення документа за id
+
+app.delete('/documents/:id', authMiddleware, (req, res) => {
+    // Отримуємо id з параметрів маршруту
+    const documentId = parseInt(req.params.id);
+    const documentIndex = documents.findIndex(doc => doc.id === documentId);
+
+    // Якщо документ з таким id не знайдено
+    if (documentIndex === -1) {
+        return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Видаляємо документ з масиву
+    documents.splice(documentIndex, 1);
+
+    // Відповідаємо статусом 204 No Content, тіло відповіді буде порожнім
+    res.status(204).send();
+});
+
 
 // Запити до /employees вимагають і аутентифікації, і прав адміністратора
 // Зверніть увагу на порядок: спочатку auth, потім adminOnly
@@ -90,12 +122,10 @@ app.get('/employees', authMiddleware, adminOnlyMiddleware, (req, res) => {
     res.status(200).json(employees);
 });
 
-// --- КІНЕЦЬ МАРШРУТІВ ---
-// Створюємо простий маршрут для кореневого URL ('/')
-// Він буде відповідати на GET-запити
 app.get('/', (req, res) => {
     res.send('Hello World! The server is running.');
 });
+// --- КІНЕЦЬ МАРШРУТІВ ---
 
 // Запускаємо сервер і змушуємо його "слухати" вказаний порт
 app.listen(PORT, () => {
